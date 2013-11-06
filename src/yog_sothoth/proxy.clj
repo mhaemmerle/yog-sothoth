@@ -22,16 +22,19 @@
     (on-closed remote-channel #(log/info "remote channel closed"))
     remote-channel))
 
+(defn to-event [from to size info data]
+  {:from from :to to :size size :info info :data data})
+
 (defn relay-and-log [buffer {:keys [from] :as meta}]
   (try
     (let [b (contiguous buffer)
           decoded (decoder (convert b String))
-          event {:from from :to nil :size (.capacity b) :info :ok :data decoded}]
+          event (to-event from nil (.capacity b) :ok decoded)]
       (gui/add-event event)
       buffer)
     (catch Exception e
       (log/error "failed to decode message: " e)
-      (gui/add-event {:from from :to nil :size nil :info :error :data e}))
+      (gui/add-event (to-event from nil nil :error e)))
     (finally
       ;; FIXME add error event
       buffer)))
