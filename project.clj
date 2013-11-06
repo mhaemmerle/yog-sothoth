@@ -7,7 +7,8 @@
                  [org.clojure/core.async "0.1.0-SNAPSHOT"]
                  [aleph "0.3.0"]
                  [cheshire "5.2.0"]
-                 [seesaw "1.4.4"]]
+                 [seesaw "1.4.4"]
+                 [byte-streams "0.1.6"]]
   :repositories {"sonatype-oss-public"
                  "https://oss.sonatype.org/content/groups/public/"}
   :plugins [[lein-marginalia "0.7.1"]]

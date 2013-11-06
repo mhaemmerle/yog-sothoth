@@ -3,14 +3,15 @@
             [aleph.tcp :refer [start-tcp-server tcp-client]]
             [lamina.core :refer [receive-all enqueue wait-for-result
                                  on-closed siphon map*]]
-            [gloss.core :refer [finite-frame string]]
+            [gloss [core :refer [finite-frame finite-block string]]
+             [io :refer [contiguous]]]
             [cheshire.core :refer [parse-string]]
-            [yog-sothoth [gui :as gui] [config :as c]]))
+            [yog-sothoth [gui :as gui] [config :as c]]
+            [byte-streams :refer [convert]]))
 
-(def decoder #(parse-string %))
+(def decoder #(parse-string % true))
 
-(defn get-frame-format []
-  (finite-frame :int32 (string :utf-8)))
+(defn get-frame-format [] (finite-block :int32))
 
 (defn create-remote-channel [host port]
   (log/info "create-remote-channel")
@@ -21,22 +22,25 @@
     (on-closed remote-channel #(log/info "remote channel closed"))
     remote-channel))
 
-(defn decode [msg {:keys [from] :as meta}]
+(defn relay-and-log [buffer {:keys [from] :as meta}]
   (try
-    (let [decoded-msg (decoder msg)
-          event {:from from :to nil :size 0 :info "" :data decoded-msg}]
+    (let [b (contiguous buffer)
+          decoded (decoder (convert b String))
+          event {:from from :to nil :size (.capacity b) :info :ok :data decoded}]
       (gui/add-event event)
-      msg)
-    (catch Exception e (str "failed to decode message" msg))
+      buffer)
+    (catch Exception e
+      (log/error "failed to decode message: " e)
+      (gui/add-event {:from from :to nil :size nil :info :error :data e}))
     (finally
       ;; FIXME add error event
-      msg)))
+      buffer)))
 
 (defn handler [local-channel client-info]
   (let [remote-channel (create-remote-channel (c/get :remote-host) (c/get :remote-port))]
     (on-closed local-channel #(log/info "local channel closed"))
-    (siphon (map* #(decode % {:from :local}) local-channel) remote-channel)
-    (siphon (map* #(decode % {:from :remote}) remote-channel) local-channel)))
+    (siphon (map* #(relay-and-log % {:from :local}) local-channel) remote-channel)
+    (siphon (map* #(relay-and-log % {:from :remote}) remote-channel) local-channel)))
 
 (defn start-server [port]
   (start-tcp-server handler {:port port :frame (get-frame-format)}))
