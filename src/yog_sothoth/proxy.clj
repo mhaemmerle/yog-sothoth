@@ -36,7 +36,6 @@
       (log/error "failed to decode message: " e)
       (gui/add-event (to-event from nil nil :error e)))
     (finally
-      ;; FIXME add error event
       buffer)))
 
 (defn handler [local-channel client-info]
