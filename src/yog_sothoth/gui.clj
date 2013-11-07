@@ -4,6 +4,9 @@
             [seesaw [core :as sc] [tree :as st] [bind :as sb] [selection :as se]]
             [yog-sothoth.config :as c]))
 
+;; replace tree with tree table
+;; http://javanbswing.blogspot.de/2013/08/swing-treetable-example-using.html
+
 (sc/native!)
 
 (def events-model (atom []))
@@ -55,14 +58,39 @@
     (reset! events-model empty-table-model)
     table))
 
+(defn render-fn [renderer info]
+  (let [v (:value info)
+        l (:label v)
+        ;; FIXME type conversions
+        n (if l (name l) "undefined")]
+    (sc/config! renderer :text n)))
+
+(defn to-label [& args]
+  (clojure.string/join " " args))
+
+(declare do-tag-map)
+
+(defn m-idx [index v]
+  (do-tag-map [(format "[%s]" index) v]))
+
+(defn do-tag-map [[k v]]
+  (cond
+   (map? v) {:label k :content (map do-tag-map v)}
+   (vector? v) {:label k :content (map-indexed m-idx v)}
+   :else {:label (to-label k v) :content nil}))
+
+(defn tag-map [m]
+  {:label :root :content (map do-tag-map (seq m))})
+
 (defn create-tree-model [data]
-  (st/simple-tree-model seq? identity data))
+  (st/simple-tree-model :content :content (tag-map data)))
 
 (defn create-detail-tree []
-  (let [tree (sc/tree :id :tree)]
+  (let [tree (sc/tree :id :tree :renderer render-fn)]
     (sb/bind detail-model
              (sb/transform create-tree-model)
              (sb/property tree :model))
+    (reset! detail-model nil)
     tree))
 
 (defn create-header []

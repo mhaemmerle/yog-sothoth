@@ -9,7 +9,7 @@
                  [cheshire "5.2.0"]
                  [seesaw "1.4.4"]
                  [byte-streams "0.1.6"]]
-  :repositories {"sonatype-oss-public"
-                 "https://oss.sonatype.org/content/groups/public/"}
+  :repositories [["sonatype-oss-public"
+                  "https://oss.sonatype.org/content/groups/public/"]]
   :plugins [[lein-marginalia "0.7.1"]]
   :main yog-sothoth.core)
